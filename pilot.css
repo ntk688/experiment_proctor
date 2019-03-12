@@ -5,3 +5,15 @@ main {
 #worktypeHidden {
 	display: none;
 }
+.layer {
+	display:flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	margin-bottom: 1em;
+}
+.layer > * {
+	margin: 0 .5em;
+}
+#likerts {
+	margin: 3em 0;
+}
