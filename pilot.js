@@ -4,26 +4,28 @@ $(document).ready(function(){
 		
 		if (progressCounter < 16){
 	
-			input_reader(progressCounter, currentProfile);
+			input_reader(progressCounter, currentProfile, currentProfileWorktype);
 			progressCounter += 1;
 			
 			var rand = Math.floor(Math.random() * 100) + 1;
 		
 			if (rand%2==0) {
-				console.log("even");
+				currentProfileWorktype = "low";
 				currentProfile = low.pop();
-				$("#profile").html(html_generator(currentProfile, "low"));
+				$("#profile").html(html_generator(currentProfile));
 			}
 			else {
-				console.log("odd");
+				currentProfileWorktype = "high";
 				currentProfile = high.pop();
-				$("#profile").html(html_generator(currentProfile, "high"));
+				$("#profile").html(html_generator(currentProfile));
 			}
 		
 			
 		}
 		else {
 			
+			input_reader(progressCounter, currentProfile, currentProfileWorktype);
+
 			$.ajax({
 				type:"POST",
 				url: "responseHandler.php",
@@ -34,7 +36,7 @@ $(document).ready(function(){
 		}
 	};
 
-	function html_generator(profile, worktype){
+	function html_generator(profile){
 
 		var score = profile["nss100"] * 100;
 		if (profile["combinedTotalRevenue"]==null){
@@ -45,7 +47,7 @@ $(document).ready(function(){
 		}
 
 		//image condition hack
-		if (imageSetting == true){
+		if (imageSetting == "show"){
 			var imageSegment = '<div id="image"><div>';
 			var descriptionSegment = '<p>' + profile['description'] + '</p>';
 		}
@@ -66,7 +68,7 @@ $(document).ready(function(){
 		var layer6 = '<p>Tests taken: ' + profile["totalPassedTests"].toString()  + '</p><p>Hourly jobs: ' + profile["totalHourlyJobs"].toString()  + '</p><p>Fixed price jobs: ' + profile["totalFpJobs"].toString()  + '</p>';
 
 		var questionString = '';
-		$.each(questions, function(index, value){
+		$.each(Object.keys(questions), function(index, value){
 
 			//construct the html for the input radio button likert scales
 			var inputs = '<div class="inputContainer" id="' + value + '">';
@@ -78,39 +80,48 @@ $(document).ready(function(){
 			}
 			inputs = inputs + '</div>';
 
-			var inputTag = '<p>' + value + '</p>' + inputs;
+			var inputTag = '<p>' + questions[value] + '</p>' + inputs;
 			questionString = questionString + inputTag;
 		});
 		
 		//output the final html segment
-		html = '<div id="worktypeHidden">' + worktype + '</div>' + imageSegment + '<div id="info"><div class="layer">' + layer1 + '</div><div class="layer">' + layer2  + '</div><div class="layer">' + layer3 + '</div><div class="layer">' + layer4 + '</div><div class="layer">' + layer5 + '</div><div class="layer">' + layer6 + '</div></div><div id="likerts">' + questionString + '</div>';
+		html = imageSegment + '<div id="info"><div class="layer">' + layer1 + '</div><div class="layer">' + layer2  + '</div><div class="layer">' + layer3 + '</div><div class="layer">' + layer4 + '</div><div class="layer">' + layer5 + '</div><div class="layer">' + layer6 + '</div></div><div id="likerts">' + questionString + '</div>';
 
 		return html; 
-
 	};
 		
-	function input_reader(sequence, profile){
+	function input_reader(sequence, profile, worktype){
 		if(sequence>0){
 			responseObject = {};
 			responseObject['sequence'] = sequence;
 			responseObject['profileID'] = profile["recno"];
 			responseObject['participantID'] = participantID;
 			responseObject['tests'] = profile['totalPassedTests'];
+			responseObject['profileSetting'] = imageSetting;
 			responseObject['rate'] = profile['hourlyRate']['amount'];
 			responseObject['jss'] = profile['nss100'] * 100;
 			if (profile["combinedTotalRevenue"]==null){
-				responseObject['earnings'] = profile['combinedTotalRevenue'];
-			}
-			else {
 				responseObject['earnings'] = '0';
 			}
+			else {
+				responseObject['earnings'] = profile['combinedTotalRevenue'];	
+			}
+			
+			responseObject['worktype'] = worktype;
 
 			$("#likerts").children(".inputContainer").each(function(index){
 				var questionName = $(this).attr("id");	
-				responseObject[questionName] = $(this).children("input:checked").val();
+				var questionResponse = $(this).children("input:checked").val();
+				if (questionResponse === undefined) {
+					responseObject[questionName] = 'n/a';
+				}
+				else {
+					responseObject[questionName] = questionResponse;
+				}
 			});
-		console.log(responseObject);
+	
 		writeArray.push(responseObject);
+		console.log(responseObject);
 		console.log(writeArray);
 		};
 	};
@@ -124,8 +135,9 @@ $(document).ready(function(){
 	};
 	
 	var writeArray = [];	
-	var questions = ["Question1", "Question2", "Question3"];
+	var questions = {"QC":"This person is capable at their profession.", "QI":"This person is likely to see the project through to the end.", "QB": "This person would make sure that I am satisfied with the results of a project."};
 	var currentProfile = '';
+	var currentProfileWorktype = '';
 	var participantID = Math.floor(Math.random() * 10000000);
 
 	//these variables loaded through other script tags	
@@ -135,10 +147,10 @@ $(document).ready(function(){
 	//confusingly controls both the image and the description	
 	var imageRand = Math.floor(Math.random() * 100) + 1;
 	if (imageRand%2==0){
-		imageSetting = true;
+		imageSetting = "show";
 	}
 	else {
-		imageSetting = false;
+		imageSetting = "hide";
 	}
 	var progressCounter = 0;
 
